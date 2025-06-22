@@ -80,6 +80,115 @@
             pointer-events: none;
         }
         
+        /* Mobile controls */
+        .mobile-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 180px;
+            z-index: 100;
+            display: none;
+            pointer-events: none;
+        }
+        
+        .mobile-controls.show {
+            display: block;
+        }
+        
+        .d-pad {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+        
+        .d-pad-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .d-pad-button {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .d-pad-button:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+        
+        .d-pad-up {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .d-pad-down {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .d-pad-left {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .d-pad-right {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .shoot-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 235, 59, 0.3);
+            border: 3px solid rgba(255, 235, 59, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            pointer-events: auto;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .shoot-button:active {
+            background: rgba(255, 235, 59, 0.5);
+            transform: scale(0.95);
+        }
+
         @media (orientation: landscape) {
             .score, .lives {
                 font-size: 20px;
@@ -88,6 +197,41 @@
             .instructions {
                 font-size: 14px;
                 padding: 8px 12px;
+            }
+            .mobile-controls {
+                height: 140px;
+            }
+            .d-pad {
+                width: 100px;
+                height: 100px;
+                bottom: 15px;
+                left: 15px;
+            }
+            .d-pad-center {
+                width: 30px;
+                height: 30px;
+            }
+            .d-pad-button {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
+            .shoot-button {
+                width: 60px;
+                height: 60px;
+                bottom: 15px;
+                right: 15px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-controls {
+                display: block;
+            }
+            .instructions {
+                bottom: 200px;
+                font-size: 14px;
             }
         }
     </style>
@@ -100,6 +244,18 @@
             <div class="score">Score: <span id="score">0</span></div>
         </div>
         <div class="instructions">Arrow Keys or Touch to Move, Space or Tap to Shoot!</div>
+    </div>
+    
+    <!-- Mobile controls -->
+    <div class="mobile-controls" id="mobileControls">
+        <div class="d-pad">
+            <div class="d-pad-center"></div>
+            <div class="d-pad-button d-pad-up" data-direction="up">↑</div>
+            <div class="d-pad-button d-pad-down" data-direction="down">↓</div>
+            <div class="d-pad-button d-pad-left" data-direction="left">←</div>
+            <div class="d-pad-button d-pad-right" data-direction="right">→</div>
+        </div>
+        <div class="shoot-button" id="shootButton">FIRE</div>
     </div>
 
     <script>
@@ -190,6 +346,15 @@
 
         let lastShotTime = 0;
         const shootCooldown = 200;
+        
+        // Mobile controls state
+        let mobileKeys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            shoot: false
+        };
 
         function createEnemy() {
             const enemySize = 50;
@@ -235,10 +400,17 @@
             let dx = 0;
             let dy = 0;
 
+            // Keyboard controls
             if (keys.up) dy -= player.speed;
             if (keys.down) dy += player.speed;
             if (keys.left) dx -= player.speed;
             if (keys.right) dx += player.speed;
+            
+            // Mobile controls
+            if (mobileKeys.up) dy -= player.speed;
+            if (mobileKeys.down) dy += player.speed;
+            if (mobileKeys.left) dx -= player.speed;
+            if (mobileKeys.right) dx += player.speed;
 
             if (touch.active) {
                 const touchDx = touch.currentX - touch.startX;
@@ -261,7 +433,7 @@
             }
 
             const currentTime = Date.now();
-            if ((keys.space || touch.active) && currentTime - lastShotTime > shootCooldown) {
+            if ((keys.space || touch.active || mobileKeys.shoot) && currentTime - lastShotTime > shootCooldown) {
                 createBullet(player.x + player.width, player.y + player.height / 2, 10, 0);
                 lastShotTime = currentTime;
             }
@@ -572,15 +744,81 @@
             touch.active = false;
         });
 
+        // Mobile controls event handlers
+        function isMobileDevice() {
+            return window.innerWidth <= 768 || 'ontouchstart' in window;
+        }
+
+        function setupMobileControls() {
+            const mobileControls = document.getElementById('mobileControls');
+            const dpadButtons = document.querySelectorAll('.d-pad-button');
+            const shootButton = document.getElementById('shootButton');
+
+            if (isMobileDevice()) {
+                mobileControls.classList.add('show');
+            }
+
+            // D-pad event handlers
+            dpadButtons.forEach(button => {
+                const direction = button.dataset.direction;
+                
+                button.addEventListener('touchstart', function(event) {
+                    event.preventDefault();
+                    mobileKeys[direction] = true;
+                });
+                
+                button.addEventListener('touchend', function(event) {
+                    event.preventDefault();
+                    mobileKeys[direction] = false;
+                });
+                
+                button.addEventListener('touchcancel', function(event) {
+                    event.preventDefault();
+                    mobileKeys[direction] = false;
+                });
+            });
+
+            // Shoot button event handlers
+            shootButton.addEventListener('touchstart', function(event) {
+                event.preventDefault();
+                mobileKeys.shoot = true;
+            });
+            
+            shootButton.addEventListener('touchend', function(event) {
+                event.preventDefault();
+                mobileKeys.shoot = false;
+            });
+            
+            shootButton.addEventListener('touchcancel', function(event) {
+                event.preventDefault();
+                mobileKeys.shoot = false;
+            });
+        }
+
+        // Handle orientation and resize changes
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+            const mobileControls = document.getElementById('mobileControls');
+            if (isMobileDevice()) {
+                mobileControls.classList.add('show');
+            } else {
+                mobileControls.classList.remove('show');
+            }
+        });
+
         // Initialize
         playerImg.onload = function() {
             player.y = canvas.height / 2 - player.height / 2;
+            setupMobileControls();
             gameLoop();
         };
 
         if (playerImg.complete) {
             player.y = canvas.height / 2 - player.height / 2;
+            setupMobileControls();
             gameLoop();
+        } else {
+            setupMobileControls();
         }
     </script>
 </body>
