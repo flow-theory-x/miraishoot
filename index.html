@@ -749,37 +749,120 @@
         });
 
         // Mobile controls event handlers
+        let dpadTouch = {
+            active: false,
+            touchId: null,
+            centerX: 0,
+            centerY: 0,
+            currentX: 0,
+            currentY: 0
+        };
+
         function isMobileDevice() {
             return window.innerWidth <= 768 || 'ontouchstart' in window;
         }
 
+        function updateDpadState(x, y, centerX, centerY) {
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const deadzone = 15;
+            
+            // Reset all directions
+            mobileKeys.up = false;
+            mobileKeys.down = false;
+            mobileKeys.left = false;
+            mobileKeys.right = false;
+            
+            // Check directions based on touch position
+            if (Math.abs(dx) > deadzone || Math.abs(dy) > deadzone) {
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal movement is dominant
+                    if (dx > deadzone) mobileKeys.right = true;
+                    if (dx < -deadzone) mobileKeys.left = true;
+                } else {
+                    // Vertical movement is dominant
+                    if (dy > deadzone) mobileKeys.down = true;
+                    if (dy < -deadzone) mobileKeys.up = true;
+                }
+                
+                // Allow diagonal movement
+                if (Math.abs(dx) > deadzone && Math.abs(dy) > deadzone) {
+                    if (dx > deadzone) mobileKeys.right = true;
+                    if (dx < -deadzone) mobileKeys.left = true;
+                    if (dy > deadzone) mobileKeys.down = true;
+                    if (dy < -deadzone) mobileKeys.up = true;
+                }
+            }
+        }
+
         function setupMobileControls() {
             const mobileControls = document.getElementById('mobileControls');
-            const dpadButtons = document.querySelectorAll('.d-pad-button');
+            const dpad = document.querySelector('.d-pad');
             const shootButton = document.getElementById('shootButton');
 
             if (isMobileDevice()) {
                 mobileControls.classList.add('show');
             }
 
-            // D-pad event handlers
-            dpadButtons.forEach(button => {
-                const direction = button.dataset.direction;
+            // D-pad touch event handlers
+            dpad.addEventListener('touchstart', function(event) {
+                event.preventDefault();
+                if (!dpadTouch.active) {
+                    const touch = event.touches[0];
+                    const rect = dpad.getBoundingClientRect();
+                    
+                    dpadTouch.active = true;
+                    dpadTouch.touchId = touch.identifier;
+                    dpadTouch.centerX = rect.left + rect.width / 2;
+                    dpadTouch.centerY = rect.top + rect.height / 2;
+                    dpadTouch.currentX = touch.clientX;
+                    dpadTouch.currentY = touch.clientY;
+                    
+                    updateDpadState(touch.clientX, touch.clientY, dpadTouch.centerX, dpadTouch.centerY);
+                }
+            });
+            
+            dpad.addEventListener('touchmove', function(event) {
+                event.preventDefault();
+                if (dpadTouch.active) {
+                    for (let touch of event.touches) {
+                        if (touch.identifier === dpadTouch.touchId) {
+                            dpadTouch.currentX = touch.clientX;
+                            dpadTouch.currentY = touch.clientY;
+                            updateDpadState(touch.clientX, touch.clientY, dpadTouch.centerX, dpadTouch.centerY);
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            dpad.addEventListener('touchend', function(event) {
+                event.preventDefault();
+                for (let touch of event.changedTouches) {
+                    if (touch.identifier === dpadTouch.touchId) {
+                        dpadTouch.active = false;
+                        dpadTouch.touchId = null;
+                        
+                        // Reset all directions
+                        mobileKeys.up = false;
+                        mobileKeys.down = false;
+                        mobileKeys.left = false;
+                        mobileKeys.right = false;
+                        break;
+                    }
+                }
+            });
+            
+            dpad.addEventListener('touchcancel', function(event) {
+                event.preventDefault();
+                dpadTouch.active = false;
+                dpadTouch.touchId = null;
                 
-                button.addEventListener('touchstart', function(event) {
-                    event.preventDefault();
-                    mobileKeys[direction] = true;
-                });
-                
-                button.addEventListener('touchend', function(event) {
-                    event.preventDefault();
-                    mobileKeys[direction] = false;
-                });
-                
-                button.addEventListener('touchcancel', function(event) {
-                    event.preventDefault();
-                    mobileKeys[direction] = false;
-                });
+                // Reset all directions
+                mobileKeys.up = false;
+                mobileKeys.down = false;
+                mobileKeys.left = false;
+                mobileKeys.right = false;
             });
 
             // Shoot button event handlers
